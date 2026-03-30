@@ -129,7 +129,7 @@
 
 <header>
   <h1>AJTBD Дашборд — Вагимагия</h1>
-  <span>Обновлено: 30.03.2026 18:05</span>
+  <span>Обновлено: 30.03.2026 19:15</span>
 </header>
 
 <nav>
@@ -538,14 +538,22 @@ function filterClusters() {
     return `<span style="color:var(--muted);font-size:12px">${s.slice(0, 90)}…</span>`;
   };
 
-  document.getElementById('cl-tbody').innerHTML = filtered.map(c => `
-    <tr class="clickable" onclick="openModal(${JSON.stringify(c.label)}, ${JSON.stringify(c.examples)})">
+  window._clFiltered = filtered;
+  document.getElementById('cl-tbody').innerHTML = filtered.map((c, i) => `
+    <tr class="clickable" data-idx="${i}">
       <td>${typeLabel(c.type)}</td>
       <td style="font-weight:500">${c.label}</td>
       <td style="text-align:center;font-weight:700;color:#e2e8f0">${Math.round(parseFloat(c.count)||0)}</td>
       <td>${previewExamples(c.examples)}</td>
       <td style="color:var(--muted);font-size:12px">${dateShort(c.updated)}</td>
     </tr>`).join('');
+
+  document.getElementById('cl-tbody').querySelectorAll('tr.clickable').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const c = window._clFiltered[+tr.dataset.idx];
+      openModal(c.label, c.examples);
+    });
+  });
 }
 
 // Initial render
