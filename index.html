@@ -48,6 +48,33 @@
   .score-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
   #quotes-count { color: var(--muted); font-size: 12px; margin-left: 8px; }
 
+  /* ── Modal ── */
+  #modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 8888;
+    background: rgba(0,0,0,.6); align-items: center; justify-content: center;
+  }
+  #modal-overlay.open { display: flex; }
+  #modal-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px 32px; max-width: 680px; width: 90%;
+    max-height: 80vh; overflow-y: auto; position: relative;
+  }
+  #modal-box h4 { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 16px; line-height: 1.4; }
+  #modal-examples { list-style: none; }
+  #modal-examples li {
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    color: var(--text); font-size: 13px; line-height: 1.6;
+  }
+  #modal-examples li:last-child { border-bottom: none; }
+  #modal-close {
+    position: absolute; top: 16px; right: 18px;
+    background: none; border: none; color: var(--muted);
+    font-size: 22px; cursor: pointer; line-height: 1;
+  }
+  #modal-close:hover { color: var(--text); }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover td { background: rgba(99,102,241,.1); }
+
   /* ── Auth overlay ── */
   #auth-overlay {
     position: fixed; inset: 0; z-index: 9999;
@@ -81,6 +108,14 @@
 </head>
 <body>
 
+<div id="modal-overlay" onclick="if(event.target===this) closeModal()">
+  <div id="modal-box">
+    <button id="modal-close" onclick="closeModal()">×</button>
+    <h4 id="modal-title"></h4>
+    <ul id="modal-examples"></ul>
+  </div>
+</div>
+
 <div id="auth-overlay">
   <div id="auth-box">
     <h2>AJTBD Дашборд</h2>
@@ -94,7 +129,7 @@
 
 <header>
   <h1>AJTBD Дашборд — Вагимагия</h1>
-  <span>Обновлено: 30.03.2026 14:31</span>
+  <span>Обновлено: 30.03.2026 18:05</span>
 </header>
 
 <nav>
@@ -446,6 +481,29 @@ function filterQuotes() {
     </tr>`).join('');
 }
 
+// ── MODAL ──────────────────────────────────────────────────────────────────
+function openModal(label, examplesRaw) {
+  document.getElementById('modal-title').textContent = label;
+  const ul = document.getElementById('modal-examples');
+  let items = [];
+  try {
+    const arr = JSON.parse(examplesRaw);
+    if (Array.isArray(arr)) items = arr;
+  } catch(e) {
+    if (examplesRaw) items = [examplesRaw];
+  }
+  ul.innerHTML = items.length
+    ? items.map(e => `<li>${e}</li>`).join('')
+    : '<li style="color:var(--muted)">Примеры отсутствуют</li>';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
 // ── CLUSTERS TAB ───────────────────────────────────────────────────────────
 function filterClusters() {
   const q  = document.getElementById('cl-search').value.toLowerCase();
@@ -467,21 +525,25 @@ function filterClusters() {
 
   const dateShort = s => s ? s.slice(0, 10) : '';
 
-  const examples = s => {
-    if (!s) return '';
+  const previewExamples = s => {
+    if (!s) return '<span style="color:var(--muted);font-size:12px">—</span>';
     try {
       const arr = JSON.parse(s);
-      if (Array.isArray(arr)) return arr.slice(0, 2).map(e => `<div style="color:var(--muted);font-size:12px;margin-bottom:2px">· ${e}</div>`).join('');
+      if (Array.isArray(arr) && arr.length) {
+        const preview = arr[0].length > 90 ? arr[0].slice(0, 90) + '…' : arr[0];
+        return `<span style="color:var(--muted);font-size:12px">· ${preview}</span>
+                ${arr.length > 1 ? `<span style="color:var(--accent);font-size:11px;margin-left:6px">+${arr.length-1} ещё</span>` : ''}`;
+      }
     } catch(e) {}
-    return `<span style="color:var(--muted);font-size:12px">${s.slice(0,120)}</span>`;
+    return `<span style="color:var(--muted);font-size:12px">${s.slice(0, 90)}…</span>`;
   };
 
   document.getElementById('cl-tbody').innerHTML = filtered.map(c => `
-    <tr>
+    <tr class="clickable" onclick="openModal(${JSON.stringify(c.label)}, ${JSON.stringify(c.examples)})">
       <td>${typeLabel(c.type)}</td>
       <td style="font-weight:500">${c.label}</td>
       <td style="text-align:center;font-weight:700;color:#e2e8f0">${Math.round(parseFloat(c.count)||0)}</td>
-      <td>${examples(c.examples)}</td>
+      <td>${previewExamples(c.examples)}</td>
       <td style="color:var(--muted);font-size:12px">${dateShort(c.updated)}</td>
     </tr>`).join('');
 }
